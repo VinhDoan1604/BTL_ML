@@ -226,9 +226,6 @@ def plot_feature_distributions_by_label(df, feature_col, label_column, label_ord
         flierprops={'marker': 'o', 'alpha': 0.5},
         ax=ax_boxplot
     )
-    # Optional: Cap Y-axis for clarity if needed
-    # upper_limit_boxplot = df[feature_col].quantile(0.98)
-    # ax_boxplot.set_ylim(0, upper_limit_boxplot)
     ax_boxplot.set_title('Boxplot by Label', fontsize=14, fontweight='bold', pad=10)
     ax_boxplot.set_xlabel('Rating Label', fontsize=12)
     ax_boxplot.set_ylabel(feature_col.replace("n_", "").replace("_", " ").title(), fontsize=12)
@@ -258,7 +255,6 @@ def plot_feature_distributions_by_label(df, feature_col, label_column, label_ord
                 transform=ax_ecdf.transAxes, horizontalalignment='right',
                 verticalalignment='top', fontsize=9, color='gray', style='italic')
 
-
     plt.tight_layout(rect=[0, 0.03, 1, 0.98]) # Adjust layout to prevent suptitle overlap
     plt.show()
 
@@ -286,7 +282,7 @@ def plot_feature_trend_by_label(df, features, label_column, label_order, colors)
     fig, axes = plt.subplots(1, len(features), figsize=(18, 4))
 
     for i, (ax, col) in enumerate(zip(axes, features)):
-        # Draw a line with color from the Inferno palette
+        # Draw a line with color
         ax.plot(label_order, feat_means[col].values, 'o-',
                 color=colors[i % len(colors)], markersize=8, lw=3, label=col)
 
@@ -299,7 +295,7 @@ def plot_feature_trend_by_label(df, features, label_column, label_order, colors)
         ax.spines[['top', 'right']].set_visible(False)
 
     # Overall title
-    plt.suptitle('Feature Trend by Label (Inferno Theme)',
+    plt.suptitle('Feature Trend by Label',
                  fontweight='bold', fontsize=16, y=1.08, color='#333333')
 
     plt.tight_layout()
@@ -307,23 +303,17 @@ def plot_feature_trend_by_label(df, features, label_column, label_order, colors)
 
 def plot_emoji_analysis(df, text_column, label_column, label_order, colors):
     # --- 1. Prepare data for Visualization ---
-    # Collect all emojis from the 'text' column
     all_em = [char for text in df[text_column].dropna() for char in text if emoji.is_emoji(char)]
 
-    # Calculate percentages for Donut Chart
-    # Use 'num_emoji' to determine if a review has any emojis
     has_emoji_count = (df['num_emoji'] > 0).sum()
     no_emoji_count = len(df) - has_emoji_count
     has_emoji_pct = (has_emoji_count / len(df)) * 100
     no_emoji_pct = 100 - has_emoji_pct
 
-    # Get Top 12 Emojis for Bar Chart
     top_12_em = Counter(all_em).most_common(12)
     em_names = [emoji.demojize(e) for e, _ in top_12_em]
     em_counts = [c for _, c in top_12_em]
 
-    # Calculate percentage of reviews with emojis by rating
-    # Use 'num_emoji' to determine if a review has any emojis
     em_rate = df.groupby(label_column)['num_emoji'].apply(lambda x: (x > 0).mean()) * 100
 
     # --- 2. Initialize Canvas ---
@@ -358,31 +348,16 @@ def plot_emoji_analysis(df, text_column, label_column, label_order, colors):
         ax2.text(idx, val + 0.3, f'{val:.0f}%', ha='center', fontsize=9)
     ax2.spines[['top', 'right']].set_visible(False)
 
-    # # --- 5. BOTTOM: Horizontal Bar Chart (Top 12 Emojis) ---
-    # ax3 = fig.add_subplot(gs[1, :])
-    # # Use 'inferno' colormap
-    # colors_inferno = cm.inferno(np.linspace(0.1, 0.8, 12))
-
-    # bars = ax3.barh(em_names, em_counts, color=colors_inferno)
-    # ax3.set_title('Top 12 Popular Emojis', fontsize=15, fontweight='bold', pad=20)
-    # ax3.set_xlabel('Frequency (Occurrences)', fontweight='semibold')
-    # ax3.invert_yaxis()  # Reverse to have the most frequent emoji at the top
-
-    # # Add numerical values to the end of each bar
-    # for i, v in enumerate(em_counts):
-    #     ax3.text(v + (max(em_counts)*0.01), i, f'{v:,}', va='center', fontsize=10, fontweight='bold')
-
     plt.tight_layout()
     plt.show()
 
-def plot_overall_top_words(df, text_col, top_n=20, ngram_range=(1, 1), title="Unigrams"):
+def plot_overall_top_words(df, text_col, top_n=20, ngram_range=(1, 1), title="Unigrams", theme_palette="inferno"):
     """
     Vẽ biểu đồ tần suất từ vựng trên TOÀN BỘ tập dữ liệu (Global Bag of Words)
     """
     texts = df[text_col].dropna().tolist()
 
     # 1. Khởi tạo Vectorizer
-    # Bạn có thể thêm custom stop_words vào tham số stop_words ở đây nếu cần
     vectorizer = CountVectorizer(ngram_range=ngram_range, stop_words='english', max_features=10000)
 
     # 2. Fit và transform để đếm tần suất
@@ -399,8 +374,9 @@ def plot_overall_top_words(df, text_col, top_n=20, ngram_range=(1, 1), title="Un
 
     # 5. Vẽ biểu đồ
     plt.figure(figsize=(10, 6))
-    # Dùng palette magma giống ý tưởng của Bản A cũ
-    sns.barplot(x=top_freq, y=top_words, palette='magma', edgecolor='white')
+    
+    # Đồng bộ palette truyền từ ngoài vào
+    sns.barplot(x=top_freq, y=top_words, palette=theme_palette, edgecolor='white')
 
     plt.title(f"Top {top_n} Overall {title} in Corpus", fontweight='bold', fontsize=14, pad=15)
     plt.xlabel('Global Frequency', fontsize=12)
@@ -439,13 +415,14 @@ def get_ngram_filename_suffix(ngram_range):
     else:
         return f"ngram_{ngram_range[0]}_{ngram_range[1]}"
 
-def plot_top_words_by_label(df, text_col, label_col, top_n=15, ngram_range=(1,1)):
-    labels = sorted(df[label_col].unique())
-    n_labels = len(labels)
+# ĐÃ BỔ SUNG THAM SỐ `label_order` VÀ `colors` ĐỂ TRÁNH LỖI BIẾN TOÀN CỤC KHÔNG XÁC ĐỊNH
+def plot_top_words_by_label(df, text_col, label_col, label_order, colors, top_n=15, ngram_range=(1,1)):
+    # Thay vì tự sort unique, dùng label_order được truyền vào để đảm bảo thứ tự khớp màu
+    n_labels = len(label_order)
 
     fig, axes = plt.subplots(1, n_labels, figsize=(4 * n_labels, 6), sharey=False)
 
-    for ax, star, color in zip(axes, labels, colors):
+    for ax, star, color in zip(axes, label_order, colors):
         texts = df[df[label_col] == star][text_col].dropna().tolist()
 
         vec = CountVectorizer(
@@ -477,10 +454,8 @@ def plot_top_words_by_label(df, text_col, label_col, top_n=15, ngram_range=(1,1)
     plt.suptitle(f'Top {top_n} {ngram_desc} Words by Rating',
                  fontweight='bold', fontsize=13, y=1.02)
     plt.tight_layout()
-    plt.savefig(f'eda_05_top_words_{filename_suffix}.png',
-                bbox_inches='tight')
+    # plt.savefig(f'eda_05_top_words_{filename_suffix}.png', bbox_inches='tight')
     plt.show()
-
 
 def plot_tfidf_features_per_class(df, text_column, label_column, label_order, colors, theme_palette, max_features=8000, ngram_range=(1, 5)):
     label_docs = {
@@ -541,4 +516,3 @@ def plot_jaccard_similarity_heatmap(df, label_column, label_order, theme_palette
     plt.tight_layout()
     plt.show()
     print("Adjacent labels have high Jaccard similarity → high adjacent confusion → should use ordinal-aware evaluation")
-
