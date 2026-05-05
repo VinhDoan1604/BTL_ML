@@ -208,8 +208,8 @@ class BERT_LSTMPipeline:
         class_weight_dict = dict(enumerate(weights))
 
         print("Đang Tokenize dữ liệu cho Hybrid BERT + LSTM...")
-        train_encodings = self.tokenizer(df_train[self.text_col].tolist(), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf')
-        val_encodings = self.tokenizer(df_val[self.text_col].tolist(), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf')
+        train_encodings = self.tokenizer(df_train[self.text_col].tolist(), truncation=True, padding='max_length', max_length=self.max_len, return_tensors='tf')
+        val_encodings = self.tokenizer(df_val[self.text_col].tolist(), truncation=True, padding='max_length', max_length=self.max_len, return_tensors='tf')
 
         train_dataset = tf.data.Dataset.from_tensor_slices((dict(train_encodings), y_train_idx)).shuffle(10000).batch(16)
         val_dataset = tf.data.Dataset.from_tensor_slices((dict(val_encodings), y_val_idx)).batch(16)
@@ -249,7 +249,7 @@ class BERT_LSTMPipeline:
         )
 
     def predict(self, df_test):
-        test_encodings = self.tokenizer(df_test[self.text_col].tolist(), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf')
+        test_encodings = self.tokenizer(df_test[self.text_col].tolist(), truncation=True, padding='max_length', max_length=self.max_len, return_tensors='tf')
         test_dataset = tf.data.Dataset.from_tensor_slices((dict(test_encodings))).batch(32)
         preds = self.model.predict(test_dataset)
         return np.argmax(preds, axis=1) + 1
