@@ -20,7 +20,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from scipy.sparse import hstack, csr_matrix
 
 # Transformers
-from transformers import TFAutoModelForSequenceClassification, AutoTokenizer
+from transformers import TFAutoModelForSequenceClassification, AutoTokenizer, TFAutoModel
 from sentence_transformers import SentenceTransformer
 
 def compute_comprehensive_metrics(y_true, y_pred):
@@ -186,7 +186,75 @@ class LSTMPipeline:
         texts_test = df_test[self.text_col].to_numpy()
         preds = self.model.predict(texts_test, verbose=0)
         return np.argmax(preds, axis=1) + 1
+
+class BERT_LSTMPipeline:
+    def __init__(self, model_name='distilbert-base-uncased', max_len=128, text_col='text'):
+        self.model_name = model_name
+        self.max_len = max_len
+        self.text_col = text_col
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+
+    def fit(self, df_train, y_train, df_val, y_val):
+        self.num_classes = len(np.unique(y_train))
+        y_train_idx = y_train - 1
+        y_val_idx = y_val.values - 1
+
+        # Trọng số cân bằng lớp
+        weights = compute_class_weight(
+            class_weight='balanced',
+            classes=np.unique(y_train_idx),
+            y=y_train_idx
+        )
+        class_weight_dict = dict(enumerate(weights))
+
+        print("Đang Tokenize dữ liệu cho Hybrid BERT + LSTM...")
+        train_encodings = self.tokenizer(df_train[self.text_col].tolist(), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf')
+        val_encodings = self.tokenizer(df_val[self.text_col].tolist(), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf')
+
+        train_dataset = tf.data.Dataset.from_tensor_slices((dict(train_encodings), y_train_idx)).shuffle(10000).batch(16)
+        val_dataset = tf.data.Dataset.from_tensor_slices((dict(val_encodings), y_val_idx)).batch(16)
+
+        # 1. KIẾN TRÚC HYBRID
+        input_ids = Input(shape=(self.max_len,), dtype=tf.int32, name="input_ids")
+        attention_mask = Input(shape=(self.max_len,), dtype=tf.int32, name="attention_mask")
+
+        # Load BERT gốc (không có đầu phân loại)
+        bert_model = TFAutoModel.from_pretrained(self.model_name, use_safetensors=False)
+        
+        # ĐÓNG BĂNG BERT
+        bert_model.trainable = False 
+
+        # Lấy BERT Sequence (Vector của từng từ)
+        bert_output = bert_model(input_ids, attention_mask=attention_mask)
+        sequence_output = bert_output.last_hidden_state # Shape: (batch_size, max_len, 768)
+
+        # Đẩy Sequence vào LSTM
+        lstm_out = LSTM(128, return_sequences=False)(sequence_output)
+        dropout_out = Dropout(0.5)(lstm_out)
+        final_output = Dense(self.num_classes, activation='softmax')(dropout_out)
+
+        self.model = tf_keras.Model(inputs=[input_ids, attention_mask], outputs=final_output)
+
+        optimizer = tf_keras.optimizers.Adam(learning_rate=1e-3) # Tốc độ học lớn hơn một chút vì BERT đã đóng băng
+        loss = tf_keras.losses.SparseCategoricalCrossentropy()
+
+        self.model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
+        early_stopping = tf_keras.callbacks.EarlyStopping(monitor='val_loss', patience=2, restore_best_weights=True)
+
+        self.model.fit(
+            train_dataset, validation_data=val_dataset,
+            epochs=5,
+            class_weight=class_weight_dict,
+            callbacks=[early_stopping], verbose=1
+        )
+
+    def predict(self, df_test):
+        test_encodings = self.tokenizer(df_test[self.text_col].tolist(), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf')
+        test_dataset = tf.data.Dataset.from_tensor_slices((dict(test_encodings))).batch(32)
+        preds = self.model.predict(test_dataset)
+        return np.argmax(preds, axis=1) + 1
     
+
 class TFBERTPipeline:
     def __init__(self, model_name='distilbert-base-uncased', max_len=128, text_col='text'):
         self.model_name = model_name
