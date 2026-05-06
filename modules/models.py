@@ -137,11 +137,13 @@ class SklearnPipeline:
         return self.model.predict(X_features)
     
 class LSTMPipeline:
-    def __init__(self, max_vocab=20000, max_len=128, embed_dim=128, text_col='processed_text'):
+    def __init__(self, max_vocab=20000, max_len=128, embed_dim=128, text_col='processed_text', epochs=5, batch_size=32):
         self.max_vocab = max_vocab
         self.max_len = max_len
         self.embed_dim = embed_dim
         self.text_col = text_col
+        self.epochs = epochs
+        self.batch_size = batch_size
         self.vectorizer = TextVectorization(max_tokens=max_vocab, output_mode='int', output_sequence_length=max_len)
 
     def fit(self, df_train, y_train, df_val, y_val):
@@ -172,26 +174,30 @@ class LSTMPipeline:
         ])
 
         self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-        early_stopping = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+        early_stopping = EarlyStopping(monitor='val_loss', patience=2, restore_best_weights=True)
 
         self.model.fit(
             texts_train, y_train_idx,
             validation_data=(texts_val, y_val_idx),
-            epochs=10, batch_size=32,
-            class_weight=class_weight_dict, # <-- Đưa trọng số vào huấn luyện
+            epochs=self.epochs, 
+            batch_size=self.batch_size,
+            class_weight=class_weight_dict, 
             callbacks=[early_stopping], verbose=1
         )
 
     def predict(self, df_test):
         texts_test = df_test[self.text_col].to_numpy()
-        preds = self.model.predict(texts_test, verbose=0)
+        preds = self.model.predict(texts_test, batch_size=self.batch_size, verbose=0)
         return np.argmax(preds, axis=1) + 1
 
+
 class BERT_LSTMPipeline:
-    def __init__(self, model_name='distilbert-base-uncased', max_len=128, text_col='text'):
+    def __init__(self, model_name='distilbert-base-uncased', max_len=128, text_col='text', epochs=5, batch_size=16):
         self.model_name = model_name
         self.max_len = max_len
         self.text_col = text_col
+        self.epochs = epochs
+        self.batch_size = batch_size
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def fit(self, df_train, y_train, df_val, y_val):
@@ -211,8 +217,8 @@ class BERT_LSTMPipeline:
         train_encodings = self.tokenizer(df_train[self.text_col].tolist(), truncation=True, padding='max_length', max_length=self.max_len, return_tensors='tf')
         val_encodings = self.tokenizer(df_val[self.text_col].tolist(), truncation=True, padding='max_length', max_length=self.max_len, return_tensors='tf')
 
-        train_dataset = tf.data.Dataset.from_tensor_slices((dict(train_encodings), y_train_idx)).shuffle(10000).batch(16)
-        val_dataset = tf.data.Dataset.from_tensor_slices((dict(val_encodings), y_val_idx)).batch(16)
+        train_dataset = tf.data.Dataset.from_tensor_slices((dict(train_encodings), y_train_idx)).shuffle(10000).batch(self.batch_size)
+        val_dataset = tf.data.Dataset.from_tensor_slices((dict(val_encodings), y_val_idx)).batch(self.batch_size)
 
         # 1. KIẾN TRÚC HYBRID
         input_ids = Input(shape=(self.max_len,), dtype=tf.int32, name="input_ids")
@@ -235,7 +241,7 @@ class BERT_LSTMPipeline:
 
         self.model = tf_keras.Model(inputs=[input_ids, attention_mask], outputs=final_output)
 
-        optimizer = tf_keras.optimizers.Adam(learning_rate=1e-3) # Tốc độ học lớn hơn một chút vì BERT đã đóng băng
+        optimizer = tf_keras.optimizers.Adam(learning_rate=1e-3) 
         loss = tf_keras.losses.SparseCategoricalCrossentropy()
 
         self.model.compile(optimizer=optimizer, loss=loss, metrics=['accuracy'])
@@ -243,23 +249,25 @@ class BERT_LSTMPipeline:
 
         self.model.fit(
             train_dataset, validation_data=val_dataset,
-            epochs=5,
+            epochs=self.epochs,
             class_weight=class_weight_dict,
             callbacks=[early_stopping], verbose=1
         )
 
     def predict(self, df_test):
         test_encodings = self.tokenizer(df_test[self.text_col].tolist(), truncation=True, padding='max_length', max_length=self.max_len, return_tensors='tf')
-        test_dataset = tf.data.Dataset.from_tensor_slices((dict(test_encodings))).batch(32)
+        test_dataset = tf.data.Dataset.from_tensor_slices((dict(test_encodings))).batch(self.batch_size)
         preds = self.model.predict(test_dataset)
         return np.argmax(preds, axis=1) + 1
     
 
 class TFBERTPipeline:
-    def __init__(self, model_name='distilbert-base-uncased', max_len=128, text_col='text'):
+    def __init__(self, model_name='distilbert-base-uncased', max_len=128, text_col='text', epochs=5, batch_size=16):
         self.model_name = model_name
         self.max_len = max_len
         self.text_col = text_col
+        self.epochs = epochs
+        self.batch_size = batch_size
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     def fit(self, df_train, y_train, df_val, y_val):
@@ -279,14 +287,13 @@ class TFBERTPipeline:
         train_encodings = self.tokenizer(df_train[self.text_col].tolist(), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf')
         val_encodings = self.tokenizer(df_val[self.text_col].tolist(), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf')
 
-        train_dataset = tf.data.Dataset.from_tensor_slices((dict(train_encodings), y_train_idx)).shuffle(10000).batch(16)
-        val_dataset = tf.data.Dataset.from_tensor_slices((dict(val_encodings), y_val_idx)).batch(16)
+        train_dataset = tf.data.Dataset.from_tensor_slices((dict(train_encodings), y_train_idx)).shuffle(10000).batch(self.batch_size)
+        val_dataset = tf.data.Dataset.from_tensor_slices((dict(val_encodings), y_val_idx)).batch(self.batch_size)
 
         self.model = TFAutoModelForSequenceClassification.from_pretrained(
             self.model_name, num_labels=self.num_classes, use_safetensors=False
         )
 
-        import tf_keras
         optimizer = tf_keras.optimizers.Adam(learning_rate=2e-5)
         loss = tf_keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
@@ -295,13 +302,13 @@ class TFBERTPipeline:
 
         self.model.fit(
             train_dataset, validation_data=val_dataset,
-            epochs=3,
-            class_weight=class_weight_dict, # <-- Đưa trọng số vào huấn luyện
+            epochs=self.epochs,
+            class_weight=class_weight_dict, 
             callbacks=[early_stopping], verbose=1
         )
 
     def predict(self, df_test):
         test_encodings = self.tokenizer(df_test[self.text_col].tolist(), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf')
-        test_dataset = tf.data.Dataset.from_tensor_slices((dict(test_encodings))).batch(32)
+        test_dataset = tf.data.Dataset.from_tensor_slices((dict(test_encodings))).batch(self.batch_size)
         preds = self.model.predict(test_dataset).logits
         return np.argmax(preds, axis=1) + 1
