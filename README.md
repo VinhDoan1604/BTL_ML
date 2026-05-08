@@ -18,7 +18,7 @@ Mục tiêu của dự án là áp dụng các kỹ thuật Học máy (Machine 
 | 1 | Nguyễn Nhật Thiên Hữu| 2311382 |
 | 2 | Nguyễn Lê Thảo Ly | 2312010 |
 | 3 | Đoàn Công Vinh | 2313906 |
-| 4 | Huỳnh Duy Chương | 231 |
+| 4 | Huỳnh Duy Chương | 2310363 |
 
 ---
 
@@ -34,12 +34,11 @@ Mục tiêu của dự án là áp dụng các kỹ thuật Học máy (Machine 
 
 Dự án được thiết kế để chạy trực tiếp trên nền tảng **Google Colab** nhằm tận dụng tài nguyên GPU miễn phí.
 
-1.  **Truy cập Notebook:** [Link Colab tại đây] (Thay bằng link của bạn)
+1.  **Truy cập Notebook:** [Link] (https://colab.research.google.com/github/VinhDoan1604/BTL_ML/blob/main/notebooks/main.ipynb)
 2.  **Thiết lập môi trường:**
     * Vào menu `Runtime` -> `Change runtime type`.
     * Chọn **Hardware accelerator** là **T4 GPU**.
 3.  **Thực thi:**
-    * Chạy cell đầu tiên để thực hiện `git clone` mã nguồn từ GitHub và cài đặt các thư viện cần thiết (`transformers`, `emoji`, `nltk`, v.v.).
     * Sử dụng menu `Runtime` -> `Run all` để chạy toàn bộ quy trình từ tải dữ liệu đến huấn luyện.
 
 ---
@@ -50,13 +49,12 @@ Hệ thống được xây dựng theo một pipeline khép kín bao gồm:
 
 1.  **Khám phá dữ liệu (EDA):** Phân tích phân phối nhãn, trực quan hóa các đặc trưng định lượng như số lượng từ, tỷ lệ viết hoa và biểu tượng cảm xúc.
 2.  **Tiền xử lý văn bản (Preprocessing):**
-    * **Normalization:** Chuyển về chữ thường, xử lý ký tự lặp (elongated words).
-    * **Emoji Handling:** Chuyển đổi biểu tượng cảm xúc thành văn bản và khử nhiễu lặp.
+    * **Normalization:** Chuyển về chữ thường, xử lý ký tự lặp và các ký tự đặc biệt.
+    * **Emoji Handling:** Chuyển đổi biểu tượng cảm xúc thành văn bản tương ứng và khử nhiễu lặp.
     * **Tokenization & Lemmatization:** Sử dụng NLTK và WordNet để đưa từ về dạng gốc theo ngữ cảnh (POS Tagging).
 3.  **Trích xuất đặc trưng (Embedding):**
-    * Áp dụng TF-IDF cho các mô hình truyền thống.
-    * Sử dụng Dense Vectors cho các mô hình Deep Learning.
-    * Kết xuất dữ liệu đã xử lý sang định dạng `.npy` để tối ưu hóa tốc độ huấn luyện.
+    * Áp dụng TF-IDF và BoW trực tiếp cho luồng văn bản đã qua xử lí. 
+    * Sử dụng SentenceTransformer để trích xuất ngữ nghĩa văn bản, sau đó lưu toàn bộ vector dưới định dạng .npy.
 4.  **Mô hình hóa (Modeling):**
     * **Machine Learning:** Logistic Regression, Naive Bayes.
     * **Deep Learning:** LSTM, RNN.
