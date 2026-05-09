@@ -23,7 +23,7 @@ Mục tiêu của dự án là áp dụng các kỹ thuật Học máy (Machine 
 ---
 
 ## LIÊN KẾT DỰ ÁN & DỮ LIỆU
-* **Báo cáo chi tiết (PDF):** [Link Google Drive / OneDrive đính kèm sau]
+* **Báo cáo chi tiết (PDF):** [Report](https://drive.google.com/file/d/1_5oFgWk39jEsADOFO-91Jowl6YWpwbL2/view?usp=sharing)
 * **Colab Notebook:** [Colab](https://colab.research.google.com/github/VinhDoan1604/BTL_ML/blob/main/main.ipynb)
 * **Dữ liệu đặc trưng (Embedding files):** [Files](https://drive.google.com/drive/folders/1KX2kw95f19eg2auDQTnq1WrZxtJgT16k?usp=sharing)
 * **Dataset:** [Shopee Reviews Dataset](https://www.kaggle.com/datasets/shymammoth/shopee-reviews)
