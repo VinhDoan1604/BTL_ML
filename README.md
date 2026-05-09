@@ -24,8 +24,8 @@ Mục tiêu của dự án là áp dụng các kỹ thuật Học máy (Machine 
 
 ## LIÊN KẾT DỰ ÁN & DỮ LIỆU
 * **Báo cáo chi tiết (PDF):** [Link Google Drive / OneDrive đính kèm sau]
-* **Colab Notebook:** [Link](https://colab.research.google.com/github/VinhDoan1604/BTL_ML/blob/main/main.ipynb)
-* **Dữ liệu đặc trưng (Feature files - `.npy` / `.h5`):** [Link tải file đặc trưng đính kèm sau]
+* **Colab Notebook:** [Colab](https://colab.research.google.com/github/VinhDoan1604/BTL_ML/blob/main/main.ipynb)
+* **Dữ liệu đặc trưng (Embedding files):** [Files](https://drive.google.com/drive/folders/1KX2kw95f19eg2auDQTnq1WrZxtJgT16k?usp=sharing)
 * **Dataset:** [Shopee Reviews Dataset](https://www.kaggle.com/datasets/shymammoth/shopee-reviews)
 
 ---
@@ -34,7 +34,7 @@ Mục tiêu của dự án là áp dụng các kỹ thuật Học máy (Machine 
 
 Dự án được thiết kế để chạy trực tiếp trên nền tảng **Google Colab** nhằm tận dụng tài nguyên GPU miễn phí.
 
-1.  **Truy cập Notebook:** [Link] (https://colab.research.google.com/github/VinhDoan1604/BTL_ML/blob/main/notebooks/main.ipynb)
+1.  **Truy cập Notebook**
 2.  **Thiết lập môi trường:**
     * Vào menu `Runtime` -> `Change runtime type`.
     * Chọn **Hardware accelerator** là **T4 GPU**.
